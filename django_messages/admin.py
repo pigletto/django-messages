@@ -32,6 +32,7 @@ class MessageAdminForm(forms.ModelForm):
 
     class Meta:
         model = Message
+        fields = '__all__'
 
 
 class MessageAdmin(admin.ModelAdmin):
