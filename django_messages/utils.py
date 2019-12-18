@@ -1,8 +1,7 @@
 import re
+import django
 from django.utils.text import wrap
 from django.utils.translation import ugettext, ugettext_lazy as _
-from django.contrib.sites.models import Site
-from django.template import Context, loader
 from django.template.loader import render_to_string
 from django.conf import settings
 
@@ -12,7 +11,6 @@ if "mailer" in settings.INSTALLED_APPS:
     from mailer import send_mail
 else:
     from django.core.mail import send_mail
-
 
 def format_quote(sender, body):
     """
@@ -29,14 +27,13 @@ def format_quote(sender, body):
         'body': quote
     }
 
-
 def format_subject(subject):
     """
     Prepends 'Re:' to the subject. To avoid multiple 'Re:'s
     a counter is added.
     NOTE: Currently unused. First step to fix Issue #48.
     FIXME: Any hints how to make this i18n aware are very welcome.
-    
+
     """
     subject_prefix_re = r'^Re\[(\d*)\]:\ '
     m = re.match(subject_prefix_re, subject, re.U)
@@ -47,8 +44,8 @@ def format_subject(subject):
     elif m is not None:
         try:
             num = int(m.group(1))
-            prefix = u"[%d]" % (num + 1)
-            subject = subject[6 + len(str(num)):]
+            prefix = u"[%d]" % (num+1)
+            subject = subject[6+len(str(num)):]
         except:
             # if anything fails here, fall back to the old mechanism
             pass
@@ -58,12 +55,11 @@ def format_subject(subject):
         'prefix': prefix
     }
 
-
 def new_message_email(sender, instance, signal,
-                      subject_prefix=_(u'New Message: %(subject)s'),
-                      template_name="django_messages/new_message.html",
-                      default_protocol=None,
-                      *args, **kwargs):
+        subject_prefix=_(u'New Message: %(subject)s'),
+        template_name="django_messages/new_message.html",
+        default_protocol=None,
+        *args, **kwargs):
     """
     This function sends an email and is called via Django's signal framework.
     Optional arguments:
@@ -76,6 +72,7 @@ def new_message_email(sender, instance, signal,
 
     if 'created' in kwargs and kwargs['created']:
         try:
+            from django.contrib.sites.models import Site
             current_domain = Site.objects.get_current().domain
             subject = subject_prefix % {'subject': instance.subject}
             message = render_to_string(template_name, {
@@ -84,6 +81,23 @@ def new_message_email(sender, instance, signal,
             })
             if instance.recipient.email != "":
                 send_mail(subject, message, settings.DEFAULT_FROM_EMAIL,
-                          [instance.recipient.email, ])
+                    [instance.recipient.email,])
         except Exception as e:
-            pass  # fail silently
+            #print e
+            pass #fail silently
+
+
+def get_user_model():
+    if django.VERSION[:2] >= (1, 5):
+        from django.contrib.auth import get_user_model
+        return get_user_model()
+    else:
+        from django.contrib.auth.models import User
+        return User
+
+
+def get_username_field():
+    if django.VERSION[:2] >= (1, 5):
+        return get_user_model().USERNAME_FIELD
+    else:
+        return 'username'

@@ -2,38 +2,39 @@ from django import forms
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from django.contrib import admin
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import Group
 
-if "notification" in settings.INSTALLED_APPS:
-    from notification import models as notification
+from django_messages.utils import get_user_model
+User = get_user_model()
+
+if "pinax.notifications" in settings.INSTALLED_APPS and getattr(settings, 'DJANGO_MESSAGES_NOTIFY', True):
+    from pinax.notifications import models as notification
 else:
     notification = None
 
 from django_messages.models import Message
 
-
 class MessageAdminForm(forms.ModelForm):
     """
     Custom AdminForm to enable messages to groups and all users.
     """
-    recipient = forms.ModelChoiceField(
-        label=_('Recipient'), queryset=User.objects.all(), required=True)
-
     group = forms.ChoiceField(label=_('group'), required=False,
-                              help_text=_('Creates the message optionally for all users or a group of users.'))
+        help_text=_('Creates the message optionally for all users or a group of users.'))
 
     def __init__(self, *args, **kwargs):
         super(MessageAdminForm, self).__init__(*args, **kwargs)
         self.fields['group'].choices = self._get_group_choices()
+        self.fields['recipient'].required = True
 
     def _get_group_choices(self):
         return [('', u'---------'), ('all', _('All users'))] + \
-               [(group.pk, group.name) for group in Group.objects.all()]
+            [(group.pk, group.name) for group in Group.objects.all()]
 
     class Meta:
         model = Message
-        fields = '__all__'
-
+        fields = ('sender', 'recipient', 'group', 'parent_msg', 'subject',
+                'body', 'sent_at', 'read_at', 'replied_at', 'sender_deleted_at',
+                'recipient_deleted_at')
 
 class MessageAdmin(admin.ModelAdmin):
     form = MessageAdminForm
@@ -49,7 +50,7 @@ class MessageAdmin(admin.ModelAdmin):
                 'parent_msg',
                 'subject', 'body',
             ),
-            'classes': ('monospace'),
+            'classes': ('monospace' ),
         }),
         (_('Date/time'), {
             'fields': (
@@ -62,6 +63,7 @@ class MessageAdmin(admin.ModelAdmin):
     list_display = ('subject', 'sender', 'recipient', 'sent_at', 'read_at')
     list_filter = ('sent_at', 'sender', 'recipient')
     search_fields = ('subject', 'body')
+    raw_id_fields = ('sender', 'recipient', 'parent_msg')
 
     def save_model(self, request, obj, form, change):
         """
@@ -84,7 +86,7 @@ class MessageAdmin(admin.ModelAdmin):
                 recipients_label = 'messages_reply_received'
 
             # Notification for the sender.
-            notification.send([obj.sender], sender_label, {'message': obj, })
+            notification.send([obj.sender], sender_label, {'message': obj,})
 
         if form.cleaned_data['group'] == 'all':
             # send to all users
@@ -105,7 +107,6 @@ class MessageAdmin(admin.ModelAdmin):
 
             if notification:
                 # Notification for the recipient.
-                notification.send([user], recipients_label, {'message': obj, })
-
+                notification.send([user], recipients_label, {'message' : obj,})
 
 admin.site.register(Message, MessageAdmin)
