@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='django-messages',
@@ -8,9 +8,6 @@ setup(
     author='Arne Brodowski',
     author_email='mail@arnebrodowski.de',
     url='https://github.com/arneb/django-messages',
-    install_requires=[
-        'Django'
-    ],
     packages=(
         'django_messages',
         'django_messages.templatetags',
@@ -23,7 +20,7 @@ setup(
             'locale/*/LC_MESSAGES/*',
         ]
     },
-    classifiers=(
+    classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
@@ -32,5 +29,5 @@ setup(
         'Programming Language :: Python',
         'Topic :: Utilities',
         'Framework :: Django',
-    ),
+    ]
 )
